@@ -7,7 +7,7 @@ url = 'https://www.reddit.com/r/RoastMe/'
 
 
 #to get reddit's trust we need an access token from their api
-handle = 'https://pushshift.io/api-parameters/'
+handle = 'https://api.pushshift.io/reddit/search/submission/?'
 #POST data included in the URL, kinda like an attachment
 #we're asking for Client_credentials Flow for non-installed script type app
 
@@ -16,7 +16,7 @@ handle = 'https://pushshift.io/api-parameters/'
 #encoded = base64.b64encode(username+':'+password)
 
 def getSubmissionsUrl(subreddit='RoastMe'):
-    return handle + 'subredit/search?' + 'subreddit='+'\''+subreddit+'\''
+    return handle + 'subreddit='+subreddit + '&fields=id'
 
 def writeSubmissions(url,filename):
     r = requests.get(url).json()
@@ -24,4 +24,4 @@ def writeSubmissions(url,filename):
         json.dump(r,f)
 
 print(getSubmissionsUrl())
-writeSubmissions('https://api.pushshift.io/reddit/search/comment/?q=science&subreddit=askscience&sort=asc&size=1','subs')
+writeSubmissions(getSubmissionsUrl(),'lol')
