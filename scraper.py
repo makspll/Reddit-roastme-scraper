@@ -3,6 +3,9 @@ import time
 import base64
 import praw as pr
 import json
+import face_recognition
+import numpy as np
+import re
 url = 'https://www.reddit.com/r/RoastMe/'
 
 
@@ -71,7 +74,7 @@ def getTopComment(database):
             maxId = comment["id"]
     return maxId
 
-def loadSubmissions(limit,subreddit='roastme',startDay=1):
+def loadSubmissions(limit,startDay=1,subreddit='roastme'):
     const_args = '&limit=500&fields=url,score,created_utc,id'
     baseurl = handle + '&subreddit='+ subreddit + const_args
 
@@ -104,13 +107,23 @@ def updateSubmissions(submissions,score_threshold,comments_threshold):
         print("updating submission : " + str(index))
         id = sub_dict["id"]
         praw_submission = pr.models.Submission(r,id)
-        print(str(praw_submission.num_comments) + "," + str(praw_submission.score))
-        if (praw_submission.num_comments <= comments_threshold or praw_submission.score <= score_threshold):
+        print(str(praw_submission.score) + "," + str(praw_submission.num_comments))
+
+        if (praw_submission.num_comments <= comments_threshold or praw_submission.score <= score_threshold \
+        or (re.match('.(jpg|png)',praw_submission.url)) != None):
             deletable_indexes.append(index)
             print("deleted")
         else:
             submissions[index]["score"] = praw_submission.score
             submissions[index]["comments"] = loadTopComments(id,comments_threshold)
+
+            picture = requests.get(praw_submission.url)
+            file_name = praw_submission.url.split('/')[-1].split('.')[-1]
+            print(praw_submission.url)
+            with open('temp.'+file_name,'wb') as f:
+                f.write(picture.content)
+                submissions[index]["encodings"] = encodePicture('temp.'+file_name)
+
     removeIndexes(deletable_indexes,filtered)
 def updateComments(comments,score_threshold):
     filtered = comments
@@ -148,12 +161,51 @@ def loadTopComments(id,limit):
             break
     return comments
 
+def encodePicture(filename):
+    pic = face_recognition.api.load_image_file(filename)
+    encodings = face_recognition.api.face_encodings(pic)
+    faces = []
+    for encoding in encodings:
+        faces.append(np.array2string(encoding))
+    return faces
+
+#given a list of dictionaries of submissions merge comments and format for poem
+def getAllComments(data):
+    formated_comments = []
+    for dict in data:
+        comments = dict["comments"]
+        for comment in comments:
+            formated_comments.append(formatToPoem(comment))
+    return formated_comments
+
+
+def writeAllFormatedComments(datafile,filename):
+    saveData(getAllComments(loadData(datafile)),filename)
+
 def removeIndexes(indexes,array):
     for i in sorted(indexes,reverse=True):
         array.pop(i)
-        print ("vagina")
 
 def formatComment(comment):
     return comment
-a = loadSubmissions(10)
-updateSubmissions(a,10,1)
+
+def formatToPoem(comment):
+    return comment
+
+def saveData(dic,filename):
+    with open(filename+'.json','w',encoding='utf-8') as f:
+        json.dump(dic,f)
+
+def loadData(filename):
+    with open(filename+'.json','r',encoding='utf-8') as f:
+        return json.load(f)
+
+#all you need, right here, filenames are paths without extension
+def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=50,comment_threshold=3,days_offset=1):
+    raw_submissions = loadSubmissions(limit,days_offset)
+    updateSubmissions(raw_submissions,upvote_threshold,comment_threshold)
+    saveData(raw_submissions,data_filename)
+    writeAllFormatedComments(data_filename,linguistic_filename)
+
+
+createDatabase('test','allTest',10,40,5)
