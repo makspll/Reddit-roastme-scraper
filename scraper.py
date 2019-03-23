@@ -172,7 +172,7 @@ def saveData(data,filename):
     else:
         feeds = loadData(filename)
 
-        feeds.extend(dic)
+        feeds.extend(data)
         with open(filename+'.json',mode = 'w') as f:
             f.write(json.dumps(feeds))
 #will pull into list of dictionaries
@@ -208,3 +208,5 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         saveData(submissions_batch[:capacity],data_filename)
         submissions_count += batch_count
         writeAllFormatedComments(data_filename,linguistic_filename)
+
+createDatabase('data','lingo',2000,10,5)
