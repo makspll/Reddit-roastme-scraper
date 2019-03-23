@@ -141,9 +141,9 @@ def getAllComments(data):
 #----------------------------USEFUL PUBLIC STUFF ------------------------------#
 
 #give it the datafile name of the database and will create linguistic database with filename
-    saveData(getAllComments(loadData(datafile)),filename)
-    def writeAllFormatedComments(datafile,filename):
 
+def writeAllFormatedComments(datafile,filename):
+    saveData(getAllComments(loadData(datafile)),filename)
 
 #this is just for general clean up
 def formatComment(comment):
