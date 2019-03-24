@@ -111,7 +111,7 @@ def requestToDict(url):
     r = requests.get(url).json()
     return r
 
-lolz = ["somebody once told me the world is gonna roll me","dads are like boomerangs.. I hope","to live is to suffer","to survive is to find meaning in the suffering","stay cool","I <3 you to byts","I always start counting from 0","you're my wonderwall"]
+lolz = ["somebody once told me the world is gonna roll me","dads are like boomerangs.. I hope","to live is to suffer","to survive is to find meaning in the suffering","stay cool","I <3 you to byts","I always start counting from 0","you're my wonderwall","did you know finland is a myth?","how you doin lars?","OwO what's this senpai","UwU","hey there fiona","wassu wassu wassuuuup","java needs to die","roses are red, violets are blue, your code don't work, and your face is like poop","abracadabra","loading poorly timed puns [========--] ...90%","yoooooooooooo"]
 #given json list of comments from subr get top n comments by score
 #have to have fields=[id]
 
