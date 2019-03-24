@@ -273,7 +273,7 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
 
         loadSubmissions(submissions_batch,curr_startDay)
 
-        if (((len(submissions_batch) >= 800):
+        if (len(submissions_batch) >= 800):
             main() #get refresh token now and then
 
         submissions_batch = updateSubmissions(submissions_batch,max(capacity,999),upvote_threshold,comment_threshold)
@@ -287,3 +287,5 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         writeAllFormatedComments(data_filename,linguistic_filename)
         print("batch saved: " + str(batch_count))
     print("finished with" + str(submissions_count) + " submissions and on day " + str(curr_startDay) + " from now")
+
+createDatabase('test','testl',1500,5,3)
