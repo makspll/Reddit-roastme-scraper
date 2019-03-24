@@ -13,9 +13,12 @@ import datetime
 
 
 url = 'https://www.reddit.com/r/RoastMe/'
+r = pr.Reddit(client_id='C-u-vJYPUPLdfg',
+                     client_secret='Hyw3NkOJrL6qufVnIgt7EZ7Xj8k',
+                     redirect_uri='http://localhost:8080',
+                     user_agent='roastr scraper')
 
-
-#to get reddit's trust we need an access token from their api
+#to get r's trust we need an access token from their api
 handle = 'https://api.pushshift.io/reddit/search/submission/?'
 handleC = 'https://api.pushshift.io/reddit/search/comment/?'
 handleComment = 'https://api.pushshift.io/reddit/submission/comment_ids/'
@@ -27,10 +30,10 @@ handleComment = 'https://api.pushshift.io/reddit/submission/comment_ids/'
 #encoded = base64.b64encode(username+':'+password)
 #!/usr/bin/env python
 
-r = pr.Reddit(client_id='C-u-vJYPUPLdfg',
-                 client_secret='Hyw3NkOJrL6qufVnIgt7EZ7Xj8k',
-                 redirect_uri='http://localhost:8080',
-                 user_agent='roastr scraper')
+#r = pr.Reddit(client_id='C-u-vJYPUPLdfg',
+#                 client_secret='Hyw3NkOJrL6qufVnIgt7EZ7Xj8k',
+#                 redirect_uri='http://localhost:8080',
+#                 user_agent='roastr scraper')
 
 def receive_connection():
     """Wait for and then return a connected socket..
@@ -60,12 +63,8 @@ def main():
         print('Usage: {} SCOPE...'.format(sys.argv[0]))
         return 1
 
-    reddit = pr.Reddit(client_id='C-u-vJYPUPLdfg',
-                         client_secret='Hyw3NkOJrL6qufVnIgt7EZ7Xj8k',
-                         redirect_uri='http://localhost:8080',
-                         user_agent='roastr scraper')
     state = str(random.randint(0, 65000))
-    url = reddit.auth.url(sys.argv[1:], state, 'permanent')
+    url = r.auth.url(sys.argv[1:], state, 'permanent')
     print(url)
 
     client = receive_connection()
@@ -82,12 +81,13 @@ def main():
         send_message(client, params['error'])
         return 1
 
-    refresh_token = reddit.auth.authorize(params['code'])
+    refresh_token = r.auth.authorize(params['code'])
     send_message(client, 'Refresh token: {}'.format(refresh_token))
     return 0
 
 # Print iterations progress
 def progress(count, total, status=''):
+
     bar_len = 30
     filled_len = int(round(bar_len * count / float(total)))
 
@@ -111,7 +111,8 @@ def requestToDict(url):
     r = requests.get(url).json()
     return r
 
-#given json list of comments from subreddit get top n comments by score
+lolz = ["somebody once told me the world is gonna roll me","dads are like boomerangs.. I hope","to live is to suffer","to survive is to find meaning in the suffering","stay cool","I <3 you to byts","I always start counting from 0","you're my wonderwall"]
+#given json list of comments from subr get top n comments by score
 #have to have fields=[id]
 
 def loadSubmissions(table,startDay=1,subreddit='roastme'):
@@ -140,7 +141,11 @@ def updateSubmissions(submissions,limit,score_threshold,comments_threshold):
     for index,sub_dict in enumerate(submissions):
         id = sub_dict["id"]
         pr_submission = pr.models.Submission(r,id)
-        progress(len(new),len(submissions),'encoding batch of:' + str(len(submissions)))
+        ratio_complete = len(new)/limit
+        ratio_through = index/(len(submissions)-1)
+        used_ratio = ratio_complete if ratio_complete > ratio_through else ratio_through
+        progress_suffix = '(c)' if ratio_complete > ratio_through else '(t)'
+        progress(used_ratio,1,progress_suffix + 'encoding batch of:' + str(len(submissions)))
         if(len(new) >= limit):
             return new
 
@@ -263,7 +268,7 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         #if managed to get refresh token
         print("*hacker voice* we're in")
     else:
-        print("couldn't connect to reddit")
+        print("couldn't connect to r")
 
     while submissions_count < limit:
 
@@ -272,11 +277,11 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         capacity = limit - submissions_count
 
         loadSubmissions(submissions_batch,curr_startDay)
-
-        if (len(submissions_batch) >= 800):
+        #if we cross over 1000 requests with this batch refresh token
+        if ((submissions_count % 1000) + len(submissions_batch) >= 999):
             main() #get refresh token now and then
 
-        submissions_batch = updateSubmissions(submissions_batch,max(capacity,999),upvote_threshold,comment_threshold)
+        submissions_batch = updateSubmissions(submissions_batch,min(capacity,999),upvote_threshold,comment_threshold)
 
         curr_startDay +=1
 
@@ -285,7 +290,10 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         saveData(submissions_batch[:capacity],data_filename)
         submissions_count += batch_count
         writeAllFormatedComments(data_filename,linguistic_filename)
-        print("batch saved: " + str(batch_count))
-    print("finished with" + str(submissions_count) + " submissions and on day " + str(curr_startDay) + " from now")
 
-createDatabase('test','testl',1500,5,3)
+        print("\n           -----Progress------         ")
+        print("batch of " + str(batch_count) + 'saved, now on posts from ' + str(curr_startDay) + ' days ago')
+        print("total so far: " + str(submissions_count))
+        print("\""+lolz[random.randint(0,len(lolz)-1)]+"\"")
+        print("\n           -----Progress------         ")
+    print("finished with " + str(submissions_count) + " submissions and on day " + str(curr_startDay) + " from now")
