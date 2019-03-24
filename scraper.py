@@ -6,6 +6,12 @@ import json
 import face_recognition
 import numpy as np
 import re,sys,os
+import operator
+import random
+import socket
+import datetime
+
+
 url = 'https://www.reddit.com/r/RoastMe/'
 
 
@@ -19,6 +25,67 @@ handleComment = 'https://api.pushshift.io/reddit/submission/comment_ids/'
 #username = 'l_IBFD5bZOT_IA'
 #password = 'CYdIMyeTNQrzIQb1qXBdwM71rms'
 #encoded = base64.b64encode(username+':'+password)
+#!/usr/bin/env python
+
+r = pr.Reddit(client_id='C-u-vJYPUPLdfg',
+                 client_secret='Hyw3NkOJrL6qufVnIgt7EZ7Xj8k',
+                 redirect_uri='http://localhost:8080',
+                 user_agent='roastr scraper')
+
+def receive_connection():
+    """Wait for and then return a connected socket..
+
+    Opens a TCP connection on port 8080, and waits for a single client.
+
+    """
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(('localhost', 8080))
+    server.listen(1)
+    client = server.accept()[0]
+    server.close()
+    return client
+
+
+def send_message(client, message):
+    """Send message to client and close the connection."""
+    print(message)
+    client.send('HTTP/1.1 200 OK\r\n\r\n{}'.format(message).encode('utf-8'))
+    client.close()
+
+
+def main():
+    """Provide the program's entry point when directly executed."""
+    if len(sys.argv) < 2:
+        print('Usage: {} SCOPE...'.format(sys.argv[0]))
+        return 1
+
+    reddit = pr.Reddit(client_id='C-u-vJYPUPLdfg',
+                         client_secret='Hyw3NkOJrL6qufVnIgt7EZ7Xj8k',
+                         redirect_uri='http://localhost:8080',
+                         user_agent='roastr scraper')
+    state = str(random.randint(0, 65000))
+    url = reddit.auth.url(sys.argv[1:], state, 'permanent')
+    print(url)
+
+    client = receive_connection()
+    data = client.recv(1024).decode('utf-8')
+    param_tokens = data.split(' ', 2)[1].split('?', 1)[1].split('&')
+    params = {key: value for (key, value) in [token.split('=')
+                                              for token in param_tokens]}
+
+    if state != params['state']:
+        send_message(client, 'State mismatch. Expected: {} Received: {}'
+                     .format(state, params['state']))
+        return 1
+    elif 'error' in params:
+        send_message(client, params['error'])
+        return 1
+
+    refresh_token = reddit.auth.authorize(params['code'])
+    send_message(client, 'Refresh token: {}'.format(refresh_token))
+    return 0
+
 # Print iterations progress
 def progress(count, total, status=''):
     bar_len = 30
@@ -69,32 +136,26 @@ def loadSubmissions(table,startDay=1,subreddit='roastme'):
 #without comments or below upvote threshold
 def updateSubmissions(submissions,limit,score_threshold,comments_threshold):
 
-    r = pr.Reddit(client_id='C-u-vJYPUPLdfg',
-                  client_secret='Hyw3NkOJrL6qufVnIgt7EZ7Xj8k',
-                  password='password123',
-                  user_agent='testscript',
-                  username='roastr123')
-
     new = []
     for index,sub_dict in enumerate(submissions):
         id = sub_dict["id"]
-        praw_submission = pr.models.Submission(r,id)
-        progress(len(new),limit,'encoding')
+        pr_submission = pr.models.Submission(r,id)
+        progress(len(new),len(submissions),'encoding batch of:' + str(len(submissions)))
         if(len(new) >= limit):
             return new
 
-        if not (praw_submission.num_comments <= comments_threshold or praw_submission.score <= score_threshold \
-        or not (praw_submission.url.endswith(('.png','.jpg')))):
+        if not (pr_submission.num_comments <= comments_threshold or pr_submission.score <= score_threshold \
+        or not (pr_submission.url.endswith(('.png','.jpg')))):
             copied_submission = submissions[index].copy()
-            file_name = praw_submission.url.split('/')[-1].split('.')[-1]
+            file_name = pr_submission.url.split('/')[-1].split('.')[-1]
 
             with open('temp.'+file_name,'wb') as f:
-                picture = requests.get(praw_submission.url)
+                picture = requests.get(pr_submission.url)
 
                 f.write(picture.content)
-                encodings = encodePicture('temp.'+file_name)
+                encodings = encodePicture('temp.'+file_name,False)# MAKE SURE FALSE
                 if len(encodings) != 0:
-                    copied_submission["score"] = praw_submission.score
+                    copied_submission["score"] = pr_submission.score
                     copied_submission["comments"] = loadTopComments(id,comments_threshold)
                     copied_submission["encodings"] = encodings
                     new.append(copied_submission.copy())
@@ -102,14 +163,10 @@ def updateSubmissions(submissions,limit,score_threshold,comments_threshold):
     return new
 
 def loadTopComments(id,limit):
-    r = pr.Reddit(client_id='C-u-vJYPUPLdfg',
-                  client_secret='Hyw3NkOJrL6qufVnIgt7EZ7Xj8k',
-                  password='password123',
-                  user_agent='testscript',
-                  username='roastr123')
-    praw_submission = pr.models.Submission(r,id)
-    praw_submission.comment_sort = 'best'
-    submission_comments = praw_submission.comments
+
+    pr_submission = pr.models.Submission(r,id)
+    pr_submission.comment_sort = 'best'
+    submission_comments = pr_submission.comments
     submission_comments.replace_more(limit=0)
     comments = []
     for index,top_level_comment in enumerate(submission_comments):
@@ -118,7 +175,10 @@ def loadTopComments(id,limit):
             break
     return comments
 
-def encodePicture(filename):
+def encodePicture(filename,test):
+    if test:
+        return "[ ]"
+    #for a dry run through to check for html errors
     try:
         pic = face_recognition.api.load_image_file(filename)
     except:
@@ -180,7 +240,14 @@ def loadData(filename):
     with open(filename+'.json','r') as f:
         return json.load(f)
 
-
+def prettyPrintSortedByDate(list_of_dicts):
+    #list_of_dicts.sort(key=operator.itemgetter('created_utc'))
+    max_len = 50
+    for dict in list_of_dicts:
+        title = dict['title']
+        diff = max(max_len - len(title),0)
+        time_ago = datetime.datetime.utcnow() - datetime.datetime.fromtimestamp(round(int(dict['created_utc'])))
+        print(title[:50] +(' '*diff) +',' + "{:.2f}".format(time_ago.total_seconds()/86400) + ',' + str(dict['score']))
 #the sub has around 236,000 submissions over 3 years
 #takes in:
 #filename for data, ling data
@@ -192,14 +259,24 @@ def loadData(filename):
 def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=50,comment_threshold=3,days_offset=1):
     curr_startDay = days_offset
     submissions_count = 0
+    if main():
+        #if managed to get refresh token
+        print("*hacker voice* we're in")
+    else:
+        print("couldn't connect to reddit")
 
     while submissions_count < limit:
+
         progress(submissions_count,limit,'processing')
         submissions_batch = []
         capacity = limit - submissions_count
 
         loadSubmissions(submissions_batch,curr_startDay)
-        submissions_batch = updateSubmissions(submissions_batch,capacity,upvote_threshold,comment_threshold)
+
+        if (((len(submissions_batch) >= 800):
+            main() #get refresh token now and then
+
+        submissions_batch = updateSubmissions(submissions_batch,max(capacity,999),upvote_threshold,comment_threshold)
 
         curr_startDay +=1
 
@@ -208,5 +285,5 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         saveData(submissions_batch[:capacity],data_filename)
         submissions_count += batch_count
         writeAllFormatedComments(data_filename,linguistic_filename)
-
-createDatabase('data','lingo',2000,10,5)
+        print("batch saved: " + str(batch_count))
+    print("finished with" + str(submissions_count) + " submissions and on day " + str(curr_startDay) + " from now")
