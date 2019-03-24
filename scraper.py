@@ -57,7 +57,7 @@ def send_message(client, message):
     client.close()
 
 
-def main():
+def refresh_token():
     """Provide the program's entry point when directly executed."""
     if len(sys.argv) < 2:
         print('Usage: {} SCOPE...'.format(sys.argv[0]))
@@ -264,7 +264,7 @@ def prettyPrintSortedByDate(list_of_dicts):
 def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=50,comment_threshold=3,days_offset=1):
     curr_startDay = days_offset
     submissions_count = 0
-    if main():
+    if refresh_token():
         #if managed to get refresh token
         print("*hacker voice* we're in")
     else:
@@ -278,8 +278,8 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
 
         loadSubmissions(submissions_batch,curr_startDay)
         #if we cross over 1000 requests with this batch refresh token
-        if ((submissions_count % 1000) + len(submissions_batch) >= 999):
-            main() #get refresh token now and then
+        if ((submissions_count % 1000) + len(submissions_batch) >= 499):
+            refresh_token() #get refresh token now and then
 
         submissions_batch = updateSubmissions(submissions_batch,min(capacity,999),upvote_threshold,comment_threshold)
 
@@ -292,8 +292,20 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         writeAllFormatedComments(data_filename,linguistic_filename)
 
         print("\n           -----Progress------         ")
-        print("batch of " + str(batch_count) + 'saved, now on posts from ' + str(curr_startDay) + ' days ago')
+        print("batch of " + str(batch_count) + ' saved, now on posts from ' + str(curr_startDay) + ' days ago')
         print("total so far: " + str(submissions_count))
         print("\""+lolz[random.randint(0,len(lolz)-1)]+"\"")
         print("\n           -----Progress------         ")
     print("finished with " + str(submissions_count) + " submissions and on day " + str(curr_startDay) + " from now")
+
+def main():
+    data_filename = input("path + filename (no extension) for datafile: ")
+    ling_filename = input("path + filename (no extension) for commentFile: ")
+    limit = int(input("amount of submissions to fetch (290000 for all): "))
+    min_karma = int(input("how many upvotes needed for post to be included (10 recomended): "))
+    min_comments = int(input("how many comments to pull per post (will skip ones with not enough comments): "))
+    offset = int(input("fetching offset in days counting backwards from today (1 - infinity): "))
+    createDatabase(data_filename,ling_filename,limit,min_karma,min_comments,offset)
+
+if __name__ == "__main__":
+    main()
