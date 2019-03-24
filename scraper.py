@@ -108,7 +108,13 @@ def jsonToDict(filename):
     return datastore
 
 def requestToDict(url):
-    r = requests.get(url).json()
+    try:
+        r = requests.get(url).json()
+    except:
+        print("cannot receive json from reddit, retrying...")
+        refresh_token()
+        sleep(3)
+        return requestToDict(url)
     return r
 
 lolz = ["somebody once told me the world is gonna roll me","dads are like boomerangs.. I hope","to live is to suffer","to survive is to find meaning in the suffering","stay cool","I <3 you to byts","I always start counting from 0","you're my wonderwall","did you know finland is a myth?","how you doin lars?","OwO what's this senpai","UwU","hey there fiona","wassu wassu wassuuuup","java needs to die","roses are red, violets are blue, your code don't work, and your face is like poop","abracadabra","loading poorly timed puns [========--] ...90%","yoooooooooooo"]
@@ -126,7 +132,7 @@ def loadSubmissions(table,startDay=1,subreddit='roastme'):
     data_dict = requestToDict(baseurl+'&after='+after+'&before='+before)
 
     data = data_dict["data"]
-    #print(data)
+
     if len(data) == 0:
         print("NO MORE DATA, could not get requested number, found: "+str(submissions_count))
         return -1
@@ -155,7 +161,11 @@ def updateSubmissions(submissions,limit,score_threshold,comments_threshold):
             file_name = pr_submission.url.split('/')[-1].split('.')[-1]
 
             with open('temp.'+file_name,'wb') as f:
-                picture = requests.get(pr_submission.url)
+                try:
+                    picture = requests.get(pr_submission.url)
+                except:
+                    print("couldn't load a picture, skipping ^-^")
+                    continue
 
                 f.write(picture.content)
                 encodings = encodePicture('temp.'+file_name,False)# MAKE SURE FALSE
