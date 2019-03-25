@@ -113,11 +113,11 @@ def requestToDict(url):
     except:
         print("cannot receive json from reddit, retrying...")
         refresh_token()
-        sleep(3)
+        time.sleep(5)
         return requestToDict(url)
     return r
 
-lolz = ["somebody once told me the world is gonna roll me","dads are like boomerangs.. I hope","to live is to suffer","to survive is to find meaning in the suffering","stay cool","I <3 you to byts","I always start counting from 0","you're my wonderwall","did you know finland is a myth?","how you doin lars?","OwO what's this senpai","UwU","hey there fiona","wassu wassu wassuuuup","java needs to die","roses are red, violets are blue, your code don't work, and your face is like poop","abracadabra","loading poorly timed puns [========--] ...90%","yoooooooooooo"]
+lolz = ["somebody once told me the world is gonna roll me","dads are like boomerangs.. I hope","to live is to suffer","to survive is to find meaning in the suffering","stay cool","I <3 you to byts","I always start counting from 0","you're my wonderwall","did you know finland is a myth?","how you doin lars?","OwO what's this senpai","UwU","hey there fiona","wassu wassu wassuuuup","java needs to die","roses are red, violets are blue, your code don't work, and your face is like poop","abracadabra","loading poorly timed puns [========--] ...90%","yoooooooooooo","Kelechi is an absolute unit","how do you do fellow hooman","what's updog","mommy !?","daddy !?","Owo what's this","i heard you like bits","what's the point anymore"]
 #given json list of comments from subr get top n comments by score
 #have to have fields=[id]
 
@@ -135,7 +135,7 @@ def loadSubmissions(table,startDay=1,subreddit='roastme'):
 
     if len(data) == 0:
         print("NO MORE DATA, could not get requested number, found: "+str(submissions_count))
-        return -1
+        return []
     submissions.extend(data)
         #print("current count: " + str(submissions_count))
     return startDay
@@ -144,45 +144,56 @@ def loadSubmissions(table,startDay=1,subreddit='roastme'):
 def updateSubmissions(submissions,limit,score_threshold,comments_threshold):
 
     new = []
-    for index,sub_dict in enumerate(submissions):
-        id = sub_dict["id"]
-        pr_submission = pr.models.Submission(r,id)
-        ratio_complete = len(new)/limit
-        ratio_through = index/(len(submissions)-1)
-        used_ratio = ratio_complete if ratio_complete > ratio_through else ratio_through
-        progress_suffix = '(c)' if ratio_complete > ratio_through else '(t)'
-        progress(used_ratio,1,progress_suffix + 'encoding batch of:' + str(len(submissions)))
-        if(len(new) >= limit):
-            return new
+    try:
+        for index,sub_dict in enumerate(submissions):
+            id = sub_dict["id"]
+            pr_submission = pr.models.Submission(r,id)
+            ratio_complete = len(new)/limit
+            ratio_through = index/(len(submissions)-1)
+            used_ratio = ratio_complete if ratio_complete > ratio_through else ratio_through
+            progress_suffix = '(c)' if ratio_complete > ratio_through else '(t)'
+            progress(used_ratio,1,progress_suffix + 'encoding batch of:' + str(len(submissions)))
+            if(len(new) >= limit):
+                return new
 
-        if not (pr_submission.num_comments <= comments_threshold or pr_submission.score <= score_threshold \
-        or not (pr_submission.url.endswith(('.png','.jpg')))):
-            copied_submission = submissions[index].copy()
-            file_name = pr_submission.url.split('/')[-1].split('.')[-1]
+            if not (pr_submission.num_comments <= comments_threshold or pr_submission.score <= score_threshold \
+            or not (pr_submission.url.endswith(('.png','.jpg')))):
+                copied_submission = submissions[index].copy()
+                file_name = pr_submission.url.split('/')[-1].split('.')[-1]
 
-            with open('temp.'+file_name,'wb') as f:
-                try:
-                    picture = requests.get(pr_submission.url)
-                except:
-                    print("couldn't load a picture, skipping ^-^")
-                    continue
+                with open('temp.'+file_name,'wb') as f:
+                    try:
+                        picture = requests.get(pr_submission.url)
+                    except:
+                        print("couldn't load a picture, skipping ^-^")
+                        continue
 
-                f.write(picture.content)
-                encodings = encodePicture('temp.'+file_name,False)# MAKE SURE FALSE
-                if len(encodings) != 0:
-                    copied_submission["score"] = pr_submission.score
-                    copied_submission["comments"] = loadTopComments(id,comments_threshold)
-                    copied_submission["encodings"] = encodings
-                    new.append(copied_submission.copy())
-    #removeIndexes(deletable_indexes,filtered)
+                    f.write(picture.content)
+                    encodings = encodePicture('temp.'+file_name,False)# MAKE SURE FALSE
+                    if len(encodings) != 0:
+                        copied_submission["score"] = pr_submission.score
+                        copied_submission["comments"] = loadTopComments(id,comments_threshold)
+                        copied_submission["encodings"] = encodings
+                        new.append(copied_submission.copy())
+    except:
+        print("some request failed in the batch, retrying the batch...")
+        refresh_token()
+        time.sleep(5)
+        return updateSubmissions(submissions,limit,score_threshold,comments_threshold)
     return new
 
 def loadTopComments(id,limit):
 
-    pr_submission = pr.models.Submission(r,id)
-    pr_submission.comment_sort = 'best'
-    submission_comments = pr_submission.comments
-    submission_comments.replace_more(limit=0)
+    try:
+        pr_submission = pr.models.Submission(r,id)
+        pr_submission.comment_sort = 'best'
+        submission_comments = pr_submission.comments
+        submission_comments.replace_more(limit=0)
+    except:
+        print("something oopsied in comments, refreshing and retrying ^_^")
+        time.sleep(3)
+        refresh_token
+        return loadTopComments(id,limit)
     comments = []
     for index,top_level_comment in enumerate(submission_comments):
         comments.append(formatComment(top_level_comment.body))
