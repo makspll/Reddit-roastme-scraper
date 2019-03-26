@@ -153,7 +153,7 @@ def updateSubmissions(submissions,limit,score_threshold,comments_threshold):
         for index,sub_dict in enumerate(submissions):
             id = sub_dict["id"]
             pr_submission = pr.models.Submission(r,id)
-            ratio_complete = len(new)/limit
+            ratio_complete = len(new)/len(submissions)
             ratio_through = index/(len(submissions)-1)
             used_ratio = ratio_complete if ratio_complete > ratio_through else ratio_through
             progress_suffix = '(c)' if ratio_complete > ratio_through else '(t)'
