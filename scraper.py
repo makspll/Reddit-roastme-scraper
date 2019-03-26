@@ -121,8 +121,8 @@ lolz = ["somebody once told me the world is gonna roll me","dads are like boomer
 #given json list of comments from subr get top n comments by score
 #have to have fields=[id]
 
-def loadSubmissions(table,startDay=1,subreddit='roastme'):
-    const_args = '&limit=500&fields=url,title,score,created_utc,id&sort_type=num_comments&sort=desc'
+def loadSubmissions(table,comments_threshold,startDay=1,subreddit='roastme'):
+    const_args = '&limit=500&fields=url,title,num_comments,score,created_utc,id&sort_type=num_comments&sort=desc'
     baseurl = handle + '&subreddit='+ subreddit + const_args
 
     submissions = table
@@ -136,6 +136,12 @@ def loadSubmissions(table,startDay=1,subreddit='roastme'):
     if len(data) == 0:
         print("NO MORE DATA, could not get requested number, found: "+str(submissions_count))
         return []
+
+#UNTESTED\
+    for index,dict in enumerate(data):
+        if dict["num_comments"] < comments_threshold:
+            data.pop(index)
+#UNTESTED/
     submissions.extend(data)
         #print("current count: " + str(submissions_count))
     return startDay
@@ -178,7 +184,7 @@ def updateSubmissions(submissions,limit,score_threshold,comments_threshold):
     except:
         print("some request failed in the batch, retrying the batch...")
         refresh_token()
-        time.sleep(5)
+        time.sleep(10)
         return updateSubmissions(submissions,limit,score_threshold,comments_threshold)
     return new
 
@@ -191,7 +197,7 @@ def loadTopComments(id,limit):
         submission_comments.replace_more(limit=0)
     except:
         print("something oopsied in comments, refreshing and retrying ^_^")
-        time.sleep(3)
+        time.sleep(10)
         refresh_token
         return loadTopComments(id,limit)
     comments = []
@@ -269,11 +275,15 @@ def loadData(filename):
 def prettyPrintSortedByDate(list_of_dicts):
     #list_of_dicts.sort(key=operator.itemgetter('created_utc'))
     max_len = 50
-    for dict in list_of_dicts:
+    strings = []
+    for dict in sorted(list_of_dicts, key = lambda dict : dict["created_utc"]):
         title = dict['title']
         diff = max(max_len - len(title),0)
         time_ago = datetime.datetime.utcnow() - datetime.datetime.fromtimestamp(round(int(dict['created_utc'])))
-        print(title[:50] +(' '*diff) +',' + "{:.2f}".format(time_ago.total_seconds()/86400) + ',' + str(dict['score']))
+        string = title[:50] +(' '*diff) +',' + "{:.2f}".format(time_ago.total_seconds()/86400) + ',' + str(dict['score'])
+        strings.append(title + ':' + str(time_ago))
+        print(string)
+    return strings
 #the sub has around 236,000 submissions over 3 years
 #takes in:
 #filename for data, ling data
@@ -297,7 +307,7 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         submissions_batch = []
         capacity = limit - submissions_count
 
-        loadSubmissions(submissions_batch,curr_startDay)
+        loadSubmissions(submissions_batch,comment_threshold,curr_startDay)
         #if we cross over 1000 requests with this batch refresh token
         if ((submissions_count % 1000) + len(submissions_batch) >= 499):
             refresh_token() #get refresh token now and then
