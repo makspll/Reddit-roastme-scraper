@@ -1,6 +1,5 @@
 import requests
 import time
-import base64
 import praw as pr
 import json
 import face_recognition
