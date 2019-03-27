@@ -152,7 +152,7 @@ def updateSubmissions(submissions,limit,score_threshold,comments_threshold):
         for index,sub_dict in enumerate(submissions):
             id = sub_dict["id"]
             pr_submission = pr.models.Submission(r,id)
-            ratio_complete = len(new)/len(submissions)
+            ratio_complete = len(new)/limit
             ratio_through = index/(len(submissions)-1)
             used_ratio = ratio_complete if ratio_complete > ratio_through else ratio_through
             progress_suffix = '(c)' if ratio_complete > ratio_through else '(t)'
@@ -232,8 +232,17 @@ def getAllComments(data):
 
 #give it the datafile name of the database and will create linguistic database with filename
 
-def writeAllFormatedComments(datafile,filename):
-    saveData(getAllComments(loadData(datafile)),filename)
+def writeAllFormatedComments(datafile,filename,overwrite = False):
+    if overwrite:
+        overwriteData(getAllComments(loadData(datafile)),filename)
+    else:
+        saveData(getAllComments(loadData(datafile)),filename)
+
+def writeCommentsToFile(dicts,filename,overwrite = False):
+    if overwrite:
+        overwriteData(getAllComments(dicts),filename)
+    else:
+        saveData(getAllComments(dicts),filename)
 
 #this is just for general clean up
 def formatComment(comment):
@@ -305,8 +314,9 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         print("couldn't connect to r")
 
     while submissions_count < limit:
-
+        print('\n')
         progress(submissions_count,limit,'processing')
+        print('\n')
         submissions_batch = []
         capacity = limit - submissions_count
 
@@ -315,7 +325,7 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         if ((submissions_count % 1000) + len(submissions_batch) >= 499):
             refresh_token() #get refresh token now and then
 
-        submissions_batch = updateSubmissions(submissions_batch,min(capacity,999),upvote_threshold,comment_threshold)
+        submissions_batch = updateSubmissions(submissions_batch,min(capacity,len(submissions_batch)),upvote_threshold,comment_threshold)
 
         curr_startDay +=1
 
@@ -323,16 +333,17 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
 
         saveData(submissions_batch[:capacity],data_filename)
         submissions_count += batch_count
-        writeAllFormatedComments(data_filename,linguistic_filename)
+        writeCommentsToFile(submissions_batch,linguistic_filename)
 
         print("\n           -----Progress------         ")
         print("batch of " + str(batch_count) + ' saved, now on posts from ' + str(curr_startDay) + ' days ago')
         print("total so far: " + str(submissions_count))
         print("\""+lolz[random.randint(0,len(lolz)-1)]+"\"")
         print("\n           -----Progress------         ")
+
     print("finished with " + str(submissions_count) + " submissions and on day " + str(curr_startDay) + " from now")
 
-def findDuplicates(dicts):
+def findDuplicatesA(dicts):
 
     sorted_list = sorted(dicts,key = lambda x : x["id"])
 
@@ -342,13 +353,22 @@ def findDuplicates(dicts):
             del sorted_list[i]
     return sorted_list
 
-def validateDatabase(filename):
+def findDuplicatesB(comments):
+    sorted_list = sorted(comments)
+
+    for i in range(len(sorted_list)-1,0,-1):
+        if sorted_list[i] == sorted_list[i-1]:
+            print("dup at: " + str(i) + ',' + str(i-1) + str(sorted_list[i]))
+            del sorted_list[i]
+    return sorted_list
+
+def validateDatabase(filename,filenameL):
 
     data = loadData(filename)
-    print(len(data))
-    new = findDuplicates(data)
 
+    new = findDuplicatesA(data)
     overwriteData(new,filename)
+    writeAllFormatedComments(filename,filenameL,True)
 
 def main():
     data_filename = input("path + filename (no extension) for datafile: ")
@@ -358,6 +378,7 @@ def main():
     min_comments = int(input("how many comments to pull per post (will skip ones with not enough comments): "))
     offset = int(input("fetching offset in days counting backwards from today (1 - infinity): "))
     createDatabase(data_filename,ling_filename,limit,min_karma,min_comments,offset)
+    validateDatabase(data_filename,ling_filename)
 
 if __name__ == "__main__":
     main()
