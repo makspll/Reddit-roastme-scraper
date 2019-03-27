@@ -111,12 +111,11 @@ def requestToDict(url):
         r = requests.get(url).json()
     except:
         print("cannot receive json from reddit, retrying...")
-        refresh_token()
         time.sleep(5)
         return requestToDict(url)
     return r
 
-lolz = ["somebody once told me the world is gonna roll me","dads are like boomerangs.. I hope","to live is to suffer","to survive is to find meaning in the suffering","stay cool","I <3 you to byts","I always start counting from 0","you're my wonderwall","did you know finland is a myth?","how you doin lars?","OwO what's this senpai","UwU","hey there fiona","wassu wassu wassuuuup","java needs to die","roses are red, violets are blue, your code don't work, and your face is like poop","abracadabra","loading poorly timed puns [========--] ...90%","yoooooooooooo","Kelechi is an absolute unit","how do you do fellow hooman","what's updog","mommy !?","daddy !?","Owo what's this","i heard you like bits","what's the point anymore"]
+lolz = ["somebody once told me the world is gonna roll me","dads are like boomerangs.. I hope","to live is to suffer","to survive is to find meaning in the suffering","stay cool","I <3 you to byts","I always start counting from 0","you're my wonderwall","did you know finland is a myth?","how you doin lars?","OwO what's this senpai","UwU","hey there fiona","wassu wassu wassuuuup","java needs to die","roses are red, violets are blue, your code don't work, and your face is like poop","abracadabra","loading poorly timed puns [========--] ...90%","yoooooooooooo","Kelechi is an absolute unit","how do you do fellow hooman","what's updog","mommy !?","daddy !?","Owo what's this","i heard you like bits","what's the point anymore","Norway doesn't exist either","the janek sends his regards","The Secret Life of Walter Mitty is a good movie 10/10","you owe me a beer",""]
 #given json list of comments from subr get top n comments by score
 #have to have fields=[id]
 
@@ -266,6 +265,11 @@ def saveData(data,filename):
         feeds.extend(data)
         with open(filename+'.json',mode = 'w') as f:
             f.write(json.dumps(feeds))
+
+def overwriteData(data,filename):
+        with open(filename+'.json',mode = 'w+') as f:
+            f.write(json.dumps(data))
+
 #will pull into list of dictionaries
 def loadData(filename):
     with open(filename+'.json','r') as f:
@@ -327,6 +331,24 @@ def createDatabase(data_filename,linguistic_filename,limit=10,upvote_threshold=5
         print("\""+lolz[random.randint(0,len(lolz)-1)]+"\"")
         print("\n           -----Progress------         ")
     print("finished with " + str(submissions_count) + " submissions and on day " + str(curr_startDay) + " from now")
+
+def findDuplicates(dicts):
+
+    sorted_list = sorted(dicts,key = lambda x : x["id"])
+
+    for i in range(len(sorted_list)-1,0,-1):
+        if sorted_list[i]["id"] == sorted_list[i-1]["id"]:
+            print("dup at: " + str(i) + ',' + str(i-1) + str(sorted_list[i]["id"]))
+            del sorted_list[i]
+    return sorted_list
+
+def validateDatabase(filename):
+
+    data = loadData(filename)
+    print(len(data))
+    new = findDuplicates(data)
+
+    overwriteData(new,filename)
 
 def main():
     data_filename = input("path + filename (no extension) for datafile: ")
