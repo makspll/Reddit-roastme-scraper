@@ -225,7 +225,7 @@ def getAllComments(data):
     for index,dict in enumerate(data):
         comments = dict["comments"]
         for comment in comments:
-            formated_comments.append(formatToPoem(comment))
+            formated_comments.append(formatComment(comment)) #NOW JUST APPENDING PLAIN COMMENTS YOU CAN USE formatToPoem to get clean comment
     return formated_comments
 
 #----------------------------USEFUL PUBLIC STUFF ------------------------------#
