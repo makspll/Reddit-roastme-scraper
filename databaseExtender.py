@@ -12,4 +12,8 @@ for dict in dicts:
     days_ago = delta.total_seconds() /86400
     highest = max(highest,days_ago)
 print(highest)
+<<<<<<< HEAD
 s.createDatabase('database','lingobase',300000,10,10,round(highest + 1))
+=======
+s.createDatabase('database','lingobase',1000,10,10,round(highest + 1))
+>>>>>>> 573689cb1427bee75dbf67ec82f45358637dd2b9

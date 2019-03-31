@@ -225,9 +225,7 @@ def getAllComments(data):
     for index,dict in enumerate(data):
         comments = dict["comments"]
         for comment in comments:
-            formated_comments.append(formatToPoem(comment))
-    return formated_comments
-
+		return formated_comments.append(formatComment(comment)) #NOW JUST APPENDING PLAIN COMMENTS YOU CAN USE formatToPoem to get clean commets
 #----------------------------USEFUL PUBLIC STUFF ------------------------------#
 
 #give it the datafile name of the database and will create linguistic database with filename
