@@ -225,7 +225,9 @@ def getAllComments(data):
     for index,dict in enumerate(data):
         comments = dict["comments"]
         for comment in comments:
-		return formated_comments.append(formatComment(comment)) #NOW JUST APPENDING PLAIN COMMENTS YOU CAN USE formatToPoem to get clean commets
+            formated_comments.append(formatComment(comment)) #NOW JUST APPENDING PLAIN COMMENTS YOU CAN USE formatToPoem to get clean commets
+    return formated_comments
+
 #----------------------------USEFUL PUBLIC STUFF ------------------------------#
 
 #give it the datafile name of the database and will create linguistic database with filename
@@ -257,7 +259,6 @@ def formatToPoem(comment):
     characterReptitions = re.sub(r'((.)\2\2\2*)',r'\2',repetitions)
     result = re.sub('[^A-Za-z.\"\' ]','',characterReptitions)
     return result
-
 
 
 #filepath without extension !
